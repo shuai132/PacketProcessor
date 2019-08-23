@@ -32,8 +32,6 @@ std::vector<uint8_t> PacketProcessor::pack(const std::string& data) {
 }
 
 void PacketProcessor::packForeach(const void* data, uint32_t size, const std::function<void(uint8_t)>& handle) {
-    uint32_t payloadSize = HEADER_LEN + LEN_BYTES + size + CHECK_LEN;
-    std::vector<uint8_t> payload(payloadSize);
     handle(0x5A);
     handle(0xA5);
     uint32_t dataSize = size + CHECK_LEN;
@@ -68,7 +66,7 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
 }
 
 size_t PacketProcessor::getDataPos() {
-    assert(buffer_.size() != 0);
+    assert(!buffer_.empty());
     assert(buffer_.size() >= headerLen_);
     return getLenPos() + LEN_BYTES;
 }
@@ -77,13 +75,13 @@ size_t PacketProcessor::getDataPos() {
  * @return 数据长度 只包含数据 不包括头、长度、校验等
  */
 size_t PacketProcessor::getDataLength() {
-    assert(buffer_.size() != 0);
+    assert(!buffer_.empty());
     assert(buffer_.size() >= headerLen_);
     return headerLen_ - CHECK_LEN;  // 减去校验
 }
 
 std::string PacketProcessor::getPayload() {
-    assert(buffer_.size() != 0);
+    assert(!buffer_.empty());
     assert(buffer_.size() >= headerLen_);
     return std::string((char*)buffer_.data() + getDataPos(), getDataLength());
 }
