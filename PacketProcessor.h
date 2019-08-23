@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include <functional>
 
 class PacketProcessor {
     using OnPacketHandle = std::function<void(const std::string& payload)>;
