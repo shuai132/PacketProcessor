@@ -123,9 +123,11 @@ void PacketProcessor::tryUnPacket() {
     }
 
     // 判断长度是否足够
-    if (buffer_.size() >= HEADER_LEN + LEN_BYTES + headerLen_ && onPacketHandle_) {
+    if (buffer_.size() >= HEADER_LEN + LEN_BYTES + headerLen_) {
         if (checkCrc()) {
-            onPacketHandle_(getPayload());
+            if (onPacketHandle_) {
+                onPacketHandle_(getPayload());
+            }
         } else {
             LOGE("checkCrc false");
         }
