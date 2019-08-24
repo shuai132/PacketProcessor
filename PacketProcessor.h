@@ -16,6 +16,10 @@ public:
 public:
     void setOnPacketHandle(const OnPacketHandle& handle);
 
+    void setUseCrc(bool useCrc);
+
+    void setBufferSize(uint32_t maxBufSize);
+
     /**
      * 打包
      * @param data 视为uint8_t*
@@ -64,8 +68,10 @@ private:
     static const int HEADER_LEN = 2;
     static const int LEN_BYTES = 4;
     static const int CHECK_LEN = 2;
+    static const uint32_t MAX_BUFFER_SIZE_DEFAULT = 1024 * 1024 * 1;    // 1MBytes
 
     std::vector<uint8_t> buffer_;   // 数据缓存
+    uint32_t maxBufferSize = MAX_BUFFER_SIZE_DEFAULT; // 最大缓存字节数
     size_t lenPos_ = 0;             // 长度位置
     size_t headerLen_ = 0;          // 包头中的长度
 };

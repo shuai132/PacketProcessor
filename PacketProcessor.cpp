@@ -17,6 +17,14 @@ void PacketProcessor::setOnPacketHandle(const OnPacketHandle& handle) {
     onPacketHandle_ = handle;
 }
 
+void PacketProcessor::setUseCrc(bool enable) {
+    useCrc_ = enable;
+}
+
+void PacketProcessor::setBufferSize(uint32_t maxBufSize) {
+    maxBufferSize = maxBufSize;
+}
+
 std::vector<uint8_t> PacketProcessor::pack(const void* data, uint32_t size) {
     uint32_t payloadSize = HEADER_LEN + LEN_BYTES + size + CHECK_LEN;
     std::vector<uint8_t> payload;
@@ -56,9 +64,27 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
 void PacketProcessor::feed(const uint8_t* data, size_t size) {
     if (size == 0) return;
 
-    // 缓存数据
-    for(size_t i = 0; i < size; i++) {
-        buffer_.push_back(data[i]);
+    // 缓存数据(当遇到包头后才开始缓存)
+    size_t startPos = 0;
+    if (buffer_.empty()) {
+        for(size_t i = 0; i < size; i++) {
+            uint8_t value = data[i];
+            if (value == 0x5A) {
+                if (i < size && data[i+1] != 0xA5) continue;
+                startPos = i;
+                goto START_BUFFER;
+            }
+        }
+    } else {
+        START_BUFFER:
+        if (buffer_.size() + size - startPos > maxBufferSize) {
+            LOGE("buffer size overflow");
+            buffer_.clear();
+            return;
+        }
+        for(size_t i = startPos; i < size; i++) {
+            buffer_.push_back(data[i]);
+        }
     }
 
     // 尝试解包
