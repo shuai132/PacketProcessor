@@ -154,10 +154,14 @@ void PacketProcessor::tryUnPacket() {
             if (onPacketHandle_) {
                 onPacketHandle_(getPayload());
             }
+            restart();
         } else {
             LOGE("checkCrc false");
+            // 重新从buffer找 防止遗漏
+            auto iter = std::find(buffer_.cbegin() + 2, buffer_.cend(), 0x5A);
+            buffer_.assign(iter, buffer_.cend());
+            tryUnPacket();
         }
-        restart();
     }
 }
 
