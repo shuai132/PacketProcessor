@@ -50,7 +50,7 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
     for(size_t i = 0; i < size; i++) {
         handle(((uint8_t*)data)[i]);
     }
-    uint16_t crcSum = useCrc_ ? crc_16((const unsigned char *)data, size) : 0;
+    uint16_t crcSum = useCrc_ ? crc_16((const unsigned char *)data, size) : 0xAA55;
     handle((crcSum & 0xff00) >> 8 * 1);
     handle((crcSum & 0x00ff) >> 8 * 0);
 }
@@ -166,15 +166,13 @@ void PacketProcessor::tryUnPacket() {
 }
 
 bool PacketProcessor::checkCrc() {
-    if (not useCrc_) return true;
-
     uint8_t* buffer = buffer_.data();
 
     uint8_t* dataPos = buffer + getDataPos();
     uint32_t dataSize = getDataLength();
     uint8_t* crcPos = dataPos + dataSize;
 
-    uint16_t crcSum = crc_16(dataPos, dataSize);
+    uint16_t crcSum = useCrc_ ? crc_16(dataPos, dataSize) : 0xAA55;
     uint16_t crcData = 0;
     for (int i = 0; i < CHECK_LEN; i++) {
         crcData += crcPos[i] << 8 * (CHECK_LEN - 1 - i);
