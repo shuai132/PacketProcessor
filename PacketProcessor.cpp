@@ -1,5 +1,6 @@
 #include <utility>
 #include <cassert>
+#include <algorithm>
 
 #include "PacketProcessor.h"
 #include "crc/checksum.h"
