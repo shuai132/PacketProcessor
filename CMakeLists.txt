@@ -11,6 +11,8 @@ add_library(${PROJECT_NAME} STATIC
         PacketProcessor.cpp
         crc/crc16.cpp)
 
+target_include_directories(${PROJECT_NAME} PUBLIC .)
+
 # log
 include_directories(modules/log)
 
