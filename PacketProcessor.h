@@ -6,7 +6,7 @@
 #include <functional>
 
 class PacketProcessor {
-    using OnPacketHandle = std::function<void(const std::string& payload)>;
+    using OnPacketHandle = std::function<void(std::string payload)>;
 
 public:
     explicit PacketProcessor(OnPacketHandle handle = nullptr, bool useCrc = false);
