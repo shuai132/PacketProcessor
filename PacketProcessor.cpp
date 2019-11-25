@@ -30,8 +30,10 @@ std::vector<uint8_t> PacketProcessor::pack(const void* data, uint32_t size) {
     uint32_t payloadSize = HEADER_LEN + LEN_BYTES + size + CHECK_LEN;
     std::vector<uint8_t> payload;
     payload.reserve(payloadSize);
-    packForeach(data, size, [&](uint8_t v) {
-        payload.push_back(v);
+    packForeach(data, size, [&](uint8_t* data, size_t size) {
+        while (size--) {
+            payload.push_back(*data++);
+        }
     });
     return payload;
 }
@@ -40,20 +42,26 @@ std::vector<uint8_t> PacketProcessor::pack(const std::string& data) {
     return pack(data.data(), data.length());
 }
 
-void PacketProcessor::packForeach(const void* data, uint32_t size, const std::function<void(uint8_t)>& handle) {
-    handle(0x5A);
-    handle(0xA5);
+void PacketProcessor::packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) {
+    uint8_t tmp[4];
+
+    tmp[0] = 0x5A;
+    tmp[1] = 0xA5;
+    handle(tmp, 2);
+
     uint32_t dataSize = size + CHECK_LEN;
-    handle((dataSize & 0xff000000) >> 8 * 3);
-    handle((dataSize & 0x00ff0000) >> 8 * 2);
-    handle((dataSize & 0x0000ff00) >> 8 * 1);
-    handle((dataSize & 0x000000ff) >> 8 * 0);
-    for(size_t i = 0; i < size; i++) {
-        handle(((uint8_t*)data)[i]);
-    }
+    tmp[0] = (dataSize & 0xff000000) >> 8 * 3;
+    tmp[1] = (dataSize & 0x00ff0000) >> 8 * 2;
+    tmp[2] = (dataSize & 0x0000ff00) >> 8 * 1;
+    tmp[3] = (dataSize & 0x000000ff) >> 8 * 0;
+    handle(tmp, 4);
+
+    handle((uint8_t*)data, size);
+
     uint16_t crcSum = useCrc_ ? crc_16((const unsigned char *)data, size) : 0xAA55;
-    handle((crcSum & 0xff00) >> 8 * 1);
-    handle((crcSum & 0x00ff) >> 8 * 0);
+    tmp[0] = (crcSum & 0xff00) >> 8 * 1;
+    tmp[1] = (crcSum & 0x00ff) >> 8 * 0;
+    handle(tmp, 2);
 }
 
 /**

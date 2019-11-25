@@ -36,7 +36,7 @@ public:
      * @param size
      * @param handle
      */
-    void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t v)>& handle);
+    void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle);
 
     /**
      * 只管送数据 会自动解析当有合适的包时会回调onPacketHandle_
