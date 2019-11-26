@@ -1,5 +1,7 @@
 # PacketProcessor
 
+[![Build Status](https://github.com/shuai132/PacketProcessor/workflows/build/badge.svg)](https://github.com/shuai132/PacketProcessor/actions?workflow=build)
+
 实现数据打包和解包，用于解决数据传输中的粘包等问题。
 
 可配置对数据crc校验，方便在串口设备的实际应用。
