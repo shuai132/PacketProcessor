@@ -13,9 +13,9 @@ int main() {
     }
     LOGI("data generated, size:%zu", TEST_PAYLOAD.size());
 
-    PacketProcessor processor([&](const std::string& payload) {
-        LOGI("get payload:%zu", payload.length());
-        assert(payload == TEST_PAYLOAD);
+    PacketProcessor processor([&](uint8_t* data, size_t size) {
+        LOGI("get payload size:%zu", size);
+        assert(std::string((char*)data, size) == TEST_PAYLOAD);
     });
 
     LOGI("packing...");

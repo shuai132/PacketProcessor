@@ -115,10 +115,10 @@ size_t PacketProcessor::getDataLength() {
     return headerLen_ - CHECK_LEN;  // 减去校验
 }
 
-std::string PacketProcessor::getPayload() {
+uint8_t*  PacketProcessor::getPayloadPtr() {
     assert(!buffer_.empty());
     assert(buffer_.size() >= headerLen_);
-    return std::string((char*)buffer_.data() + getDataPos(), getDataLength());
+    return buffer_.data() + getDataPos();
 }
 
 /**
@@ -161,7 +161,7 @@ void PacketProcessor::tryUnPacket() {
     if (buffer_.size() >= HEADER_LEN + LEN_BYTES + headerLen_) {
         if (checkCrc()) {
             if (onPacketHandle_) {
-                onPacketHandle_(getPayload());
+                onPacketHandle_(getPayloadPtr(), getDataLength());
             }
             restart();
         } else {

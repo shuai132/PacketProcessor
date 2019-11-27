@@ -6,7 +6,7 @@
 #include <functional>
 
 class PacketProcessor {
-    using OnPacketHandle = std::function<void(std::string payload)>;
+    using OnPacketHandle = std::function<void(uint8_t* data, size_t size)>;
 
 public:
     explicit PacketProcessor(OnPacketHandle handle = nullptr, bool useCrc = false);
@@ -50,7 +50,7 @@ private:
 
     size_t getDataLength();
 
-    std::string getPayload();
+    uint8_t* getPayloadPtr();
 
     size_t getLenPos();
 
