@@ -21,7 +21,7 @@ public:
     void setBufferSize(uint32_t maxBufSize);
 
     /**
-     * 打包
+     * 打包数据
      * @param data 视为uint8_t*
      * @param size
      * @return
@@ -31,7 +31,7 @@ public:
     std::vector<uint8_t> pack(const std::string& data);
 
     /**
-     * 给定数据打包 并把包字节遍历
+     * 遍历打包数据
      * @param data 视为uint8_t*
      * @param size
      * @param handle
@@ -39,7 +39,7 @@ public:
     void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle);
 
     /**
-     * 只管送数据 会自动解析当有合适的包时会回调onPacketHandle_
+     * 送数据 自动解析出数据包时回调onPacketHandle_
      * @param data
      * @param size
      */
@@ -52,26 +52,29 @@ private:
 
     uint8_t* getPayloadPtr();
 
-    size_t getLenPos();
+    bool findHeader();
 
-    void tryUnPacket();
+    void tryUnpack();
 
     bool checkCrc();
 
     size_t getNextPacketPos();
 
-    void restart();
+    void restart(uint32_t pos);
 
 private:
     OnPacketHandle onPacketHandle_;
     bool useCrc_;
+
+    static const uint8_t H_1 = 0x5A;
+    static const uint8_t H_2 = 0xA5;
     static const int HEADER_LEN = 2;
-    static const int LEN_BYTES = 4;
+    static const int LEN_CRC_B = 2;
+    static const int LEN_BYTES = 4 + LEN_CRC_B;
     static const int CHECK_LEN = 2;
-    static const uint32_t MAX_BUFFER_SIZE_DEFAULT = 1024 * 1024 * 1;    // 1MBytes
 
     std::vector<uint8_t> buffer_;   // 数据缓存
-    uint32_t maxBufferSize = MAX_BUFFER_SIZE_DEFAULT; // 最大缓存字节数
-    size_t lenPos_ = 0;             // 长度位置
-    size_t headerLen_ = 0;          // 包头中的长度
+    uint32_t maxBufferSize_ = 1024 * 1024 * 1;  // 最大缓存字节数 默认1MBytes
+    bool findHeader_ = false;       // 找到包头
+    size_t dataLen_  = 0;           // 解析出的数据长度
 };

@@ -2,10 +2,21 @@
 #include <cassert>
 #include <ctime>
 
-#include "log.h"
 #include "PacketProcessor.h"
+#include "log.h"
+
+static void sampleUsage() {
+    LOG("Sample Usage:");
+    PacketProcessor processor([&](uint8_t* data, size_t size) {
+        LOG("Got packet: %zu, %s", size, std::string((char*)data, size).c_str());
+    });
+    auto payload = processor.pack("hello world");
+    processor.feed(payload.data(), payload.size());
+}
 
 int main() {
+    sampleUsage();
+
     LOG("generate data...");
     std::string TEST_PAYLOAD;
     for (int i = 0; i < 1000; i++) {
