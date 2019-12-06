@@ -38,8 +38,8 @@ void PacketProcessor::setUseCrc(bool enable) {
     useCrc_ = enable;
 }
 
-void PacketProcessor::setBufferSize(uint32_t maxBufSize) {
-    maxBufferSize_ = maxBufSize;
+void PacketProcessor::setMaxBufferSize(uint32_t size) {
+    maxBufferSize_ = size + ALL_HEADER_LEN;
 }
 
 std::vector<uint8_t> PacketProcessor::pack(const void* data, uint32_t size) {
@@ -92,24 +92,37 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
  */
 void PacketProcessor::feed(const uint8_t* data, size_t size) {
     if (size == 0) return;
-    LOGV("feed size: %zu", size);
+    //LOGV("feed size: %zu", size);
 
     // 缓存数据(当遇到包头后才开始缓存)
     size_t startPos = 0;
     if (buffer_.empty()) {
         for(size_t i = 0; i < size; i++) {
-            uint8_t value = data[i];
-            if (value == H_1) {
-                if (i < size && data[i+1] != H_2) continue;
-                startPos = i;
-                goto START_BUFFER;
+            if (data[i] == H_1) {
+                if (i + 1 < size) {
+                    if (data[i+1] == H_2) {
+                        startPos = i;
+                        goto START_BUFFER;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    buffer_.push_back(data[i]);
+                    return;
+                }
             }
+        }
+    } else if (buffer_.size() == 1) {
+        assert(buffer_[0] == H_1);
+        for(size_t i = 0; i < size; i++) {
+            if (data[i] == H_2) goto START_BUFFER;
         }
     } else {
         START_BUFFER:
         if (buffer_.size() + size - startPos > maxBufferSize_) {
-            LOGE("buffer size overflow");
-            buffer_.clear();
+            LOGE("buffer size overflow, now: %zu, max: %u", buffer_.size() + size, maxBufferSize_);
+            typeof(buffer_) tmp;
+            tmp.swap(buffer_);
             return;
         }
         for(size_t i = startPos; i < size; i++) {
@@ -146,9 +159,8 @@ bool PacketProcessor::findHeader() {
     if (findHeader_) return true;
 
     for(size_t i = 0; i < buffer_.size(); i++) {
-        uint8_t data = buffer_[i];
-        if (data == H_1) {
-            if (buffer_.size() > i + 1) {
+        if (buffer_[i] == H_1) {
+            if (i + 1 < buffer_.size()) {
                 if (buffer_[i + 1] == H_2) {
                     if (i != 0) {
                         buffer_.assign(buffer_.cbegin() + i, buffer_.cend());
@@ -157,7 +169,7 @@ bool PacketProcessor::findHeader() {
                     return true;
                 }
             } else {
-                buffer_.assign(buffer_.cbegin() + i, buffer_.cend());
+                buffer_.assign(buffer_.cend() - 1, buffer_.cend());
                 return false;
             }
         }
@@ -207,6 +219,7 @@ void PacketProcessor::tryUnpack() {
             if (onPacketHandle_) {
                 onPacketHandle_(getPayloadPtr(), getDataLength());
             }
+            LOGV("now buffer_.size()=%zu", buffer_.size());
             restart(getNextPacketPos());
         } else {
             // 重新从buffer找 防止遗漏

@@ -18,7 +18,7 @@ public:
 
     void setUseCrc(bool useCrc);
 
-    void setBufferSize(uint32_t maxBufSize);
+    void setMaxBufferSize(uint32_t size);
 
     /**
      * 打包数据
@@ -72,6 +72,7 @@ private:
     static const int LEN_CRC_B = 2;
     static const int LEN_BYTES = 4 + LEN_CRC_B;
     static const int CHECK_LEN = 2;
+    static const int ALL_HEADER_LEN = HEADER_LEN + LEN_BYTES + CHECK_LEN;
 
     std::vector<uint8_t> buffer_;   // 数据缓存
     uint32_t maxBufferSize_ = 1024 * 1024 * 1;  // 最大缓存字节数 默认1MBytes

@@ -37,7 +37,18 @@ int main() {
     LOG("******test1******");
     processor.feed(payload.data(), payloadSize);
 
-    LOG("******test2******");
+    LOG("******test2****** 故意试错");
+    {   // 试错
+        uint8_t h1 = 0x5A;
+        uint8_t h2 = 0xA5;
+        processor.feed(&h1, 1);
+        processor.feed(&h2, 1);
+    }
+    for (int i = 0; i < payloadSize; i++) {
+        processor.feed(payload.data() + i, 1);
+    }
+
+    LOG("******test3******");
     uint32_t sendSize = 0;
     std::default_random_engine generator(time(nullptr));
     std::uniform_int_distribution<int> dis(1, 10);
