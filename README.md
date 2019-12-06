@@ -4,7 +4,7 @@
 
 实现数据打包和解包，用于解决数据传输中的粘包等问题。
 
-包头2字节(0x5AA5)+长度4字节(大端序)+长度校验4字节(长度CRC16)+数据+校验2字节(数据CRC16)
+包头2字节(0x5AA5)+长度4字节(大端序)+长度校验2字节(长度CRC16)+数据+校验2字节(数据CRC16)
 
 ## Requirements
 
@@ -15,8 +15,8 @@
 
 * CRC16 for data length
 * CRC16 of data is option
-* only `10 bytes` for data header and crc
-* support `packForeach` avoid unnecessary data copy
+* Only `10 bytes` for data header and CRC
+* Support `packForeach` avoid unnecessary data copy
 
 ## Usage
 

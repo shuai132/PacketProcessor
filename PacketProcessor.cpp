@@ -86,7 +86,7 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
 }
 
 /**
- * 约定形式: 包头2字节(0x5AA5)+长度4字节(大端序)+长度校验4字节(长度CRC16)+数据+校验2字节(数据CRC16)
+ * 约定形式: 包头2字节(0x5AA5)+长度4字节(大端序)+长度校验2字节(长度CRC16)+数据+校验2字节(数据CRC16)
  * @param data
  * @param size
  */
