@@ -11,11 +11,14 @@
 #define LOGV(fmt, ...)  ((void)0)
 #endif
 
+#define FORS(i, s, n)   for(std::remove_reference<std::remove_const<typeof(n)>::type>::type i = s; i < n; i++)
+#define FOR(i, n)       FORS(i, 0, n)
+
 template <typename T>
 static uint16_t calCrc(T param) {
     constexpr int size = sizeof(param);
     uint8_t tmp[size];
-    for (int i = 0; i < size; i++) {
+    FOR (i, size) {
         tmp[i] = param >> 8u * (size - i - 1);
     }
     return crc_16(tmp, size);
@@ -99,13 +102,16 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
  */
 void PacketProcessor::feed(const uint8_t* data, size_t size) {
     if (size == 0) return;
-    //LOGV("feed size: %zu", size);
+//    LOGI("feed size: %u", size);
+//    FOR(i, size) {
+//        LOGI("feed: %02X", data[i]);
+//    }
 
     // 缓存数据(当遇到包头后才开始缓存)
     size_t startPos = 0;
     if (buffer_.empty()) {
         START_HEADER:
-        for(size_t i = 0; i < size; i++) {
+        FOR (i, size) {
             if (data[i] == H_1) {
                 if (i + 1 < size) {
                     if (data[i+1] == H_2) {
@@ -134,7 +140,7 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
             clearBuffer();
             return;
         }
-        for(size_t i = startPos; i < size; i++) {
+        FORS (i, startPos, size) {
             buffer_.push_back(data[i]);
         }
     }
@@ -167,7 +173,7 @@ uint8_t* PacketProcessor::getPayloadPtr() {
 bool PacketProcessor::findHeader() {
     if (findHeader_) return true;
 
-    for(size_t i = 0; i < buffer_.size(); i++) {
+    FOR (i, buffer_.size()) {
         if (buffer_[i] == H_1) {
             if (i + 1 < buffer_.size()) {
                 if (buffer_[i + 1] == H_2) {
@@ -195,7 +201,7 @@ void PacketProcessor::tryUnpack() {
     if (dataLen_ == 0) {
         uint32_t size = 0;
         const int LEN_BYTES_WITHOUT_CRC = LEN_BYTES - LEN_CRC_B;
-        for(size_t i = 0; i < LEN_BYTES_WITHOUT_CRC; i++) {
+        FOR (i, LEN_BYTES_WITHOUT_CRC) {
             size += buffer_[HEADER_LEN + i] << (LEN_BYTES_WITHOUT_CRC - i - 1) * 8;
         }
 
@@ -206,7 +212,7 @@ void PacketProcessor::tryUnpack() {
         }
 
         uint16_t expectCrc = 0;
-        for(size_t i = 0; i < LEN_CRC_B; i++) {
+        FOR (i, LEN_CRC_B) {
             expectCrc += buffer_[HEADER_LEN + LEN_BYTES_WITHOUT_CRC + i] << (LEN_CRC_B - i - 1) * 8;
         }
         uint16_t sizeCrc = calCrc<uint32_t>(size);
@@ -246,7 +252,7 @@ bool PacketProcessor::checkCrc() {
 
     uint16_t expectCrc = useCrc_ ? crc_16(dataPos, dataSize) : 0xAA55;
     uint16_t dataCrc = 0;
-    for (int i = 0; i < CHECK_LEN; i++) {
+    FOR (i, CHECK_LEN) {
         dataCrc += crcPos[i] << 8u * (CHECK_LEN - 1 - i);
     }
     bool ret = dataCrc == expectCrc;
