@@ -14,7 +14,7 @@
 ## Features
 
 * CRC16 for data length
-* CRC16 of data is option
+* CRC16 of data is option (default is data size CRC)
 * Only `10 bytes` for data header and CRC
 * Support `packForeach` avoid unnecessary data copy
 

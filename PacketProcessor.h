@@ -16,6 +16,10 @@ public:
 public:
     void setOnPacketHandle(const OnPacketHandle& handle);
 
+    /**
+     * 设置对数据是否启用CRC 否则对数据长度CRC
+     * @param useCrc
+     */
     void setUseCrc(bool useCrc);
 
     void setMaxBufferSize(uint32_t size);

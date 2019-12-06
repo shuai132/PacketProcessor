@@ -14,9 +14,12 @@
 #define FORS(i, s, n)   for(std::remove_reference<std::remove_const<typeof(n)>::type>::type i = s; i < n; i++)
 #define FOR(i, n)       FORS(i, 0, n)
 
+/**
+ * 求一个值类型的 按大端序的 crc校验
+ */
 template <typename T>
 static uint16_t calCrc(T param) {
-    constexpr int size = sizeof(param);
+    constexpr auto size = sizeof(param);
     uint8_t tmp[size];
     FOR (i, size) {
         tmp[i] = param >> 8u * (size - i - 1);
@@ -89,7 +92,7 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
 
     handle((uint8_t*)data, size);
 
-    uint16_t crcSum = useCrc_ ? crc_16((uint8_t*)data, size) : 0xAA55;
+    uint16_t crcSum = useCrc_ ? crc_16((uint8_t*)data, size) : ~calCrc(size);
     tmp[0] = (crcSum & 0xff00) >> 8 * 1;
     tmp[1] = (crcSum & 0x00ff) >> 8 * 0;
     handle(tmp, 2);
@@ -250,7 +253,7 @@ bool PacketProcessor::checkCrc() {
     uint32_t dataSize = getDataLength();
     uint8_t* crcPos = dataPos + dataSize;
 
-    uint16_t expectCrc = useCrc_ ? crc_16(dataPos, dataSize) : 0xAA55;
+    uint16_t expectCrc = useCrc_ ? crc_16(dataPos, dataSize) : ~calCrc(dataSize);
     uint16_t dataCrc = 0;
     FOR (i, CHECK_LEN) {
         dataCrc += crcPos[i] << 8u * (CHECK_LEN - 1 - i);
