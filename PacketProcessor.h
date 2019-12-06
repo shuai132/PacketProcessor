@@ -20,6 +20,8 @@ public:
 
     void setMaxBufferSize(uint32_t size);
 
+    void clearBuffer();
+
     /**
      * 打包数据
      * @param data 视为uint8_t*

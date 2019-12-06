@@ -1,6 +1,5 @@
 #include <utility>
 #include <cassert>
-#include <algorithm>
 
 #include "PacketProcessor.h"
 #include "crc/checksum.h"
@@ -40,6 +39,14 @@ void PacketProcessor::setUseCrc(bool enable) {
 
 void PacketProcessor::setMaxBufferSize(uint32_t size) {
     maxBufferSize_ = size + ALL_HEADER_LEN;
+    clearBuffer();
+}
+
+void PacketProcessor::clearBuffer() {
+    typeof(buffer_) tmp;
+    tmp.swap(buffer_);
+    findHeader_ = false;
+    dataLen_ = 0;
 }
 
 std::vector<uint8_t> PacketProcessor::pack(const void* data, uint32_t size) {
@@ -97,6 +104,7 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
     // 缓存数据(当遇到包头后才开始缓存)
     size_t startPos = 0;
     if (buffer_.empty()) {
+        START_HEADER:
         for(size_t i = 0; i < size; i++) {
             if (data[i] == H_1) {
                 if (i + 1 < size) {
@@ -114,15 +122,16 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
         }
     } else if (buffer_.size() == 1) {
         assert(buffer_[0] == H_1);
-        for(size_t i = 0; i < size; i++) {
-            if (data[i] == H_2) goto START_BUFFER;
+        if (data[0] == H_2) goto START_BUFFER;
+        else {
+            buffer_.clear();
+            goto START_HEADER;
         }
     } else {
         START_BUFFER:
         if (buffer_.size() + size - startPos > maxBufferSize_) {
             LOGE("buffer size overflow, now: %zu, max: %u", buffer_.size() + size, maxBufferSize_);
-            typeof(buffer_) tmp;
-            tmp.swap(buffer_);
+            clearBuffer();
             return;
         }
         for(size_t i = startPos; i < size; i++) {
