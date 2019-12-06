@@ -54,7 +54,7 @@ public:
 private:
     size_t getDataPos();
 
-    size_t getDataLength();
+    size_t getDataSize();
 
     uint8_t* getPayloadPtr();
 
@@ -74,14 +74,14 @@ private:
 
     static const uint8_t H_1 = 0x5A;
     static const uint8_t H_2 = 0xA5;
-    static const int HEADER_LEN = 2;
-    static const int LEN_CRC_B = 2;
-    static const int LEN_BYTES = 4 + LEN_CRC_B;
-    static const int CHECK_LEN = 2;
-    static const int ALL_HEADER_LEN = HEADER_LEN + LEN_BYTES + CHECK_LEN;
+    static const unsigned int HEADER_LEN = 2;
+    static const unsigned int LEN_CRC_B = 2;
+    static const unsigned int LEN_BYTES = 4 + LEN_CRC_B;
+    static const unsigned int CHECK_LEN = 2;
+    static const unsigned int ALL_HEADER_LEN = HEADER_LEN + LEN_BYTES + CHECK_LEN;
 
     std::vector<uint8_t> buffer_;   // 数据缓存
     uint32_t maxBufferSize_ = 1024 * 1024 * 1;  // 最大缓存字节数 默认1MBytes
     bool findHeader_ = false;       // 找到包头
-    size_t dataLen_  = 0;           // 解析出的数据长度
+    size_t dataSize_ = 0;           // 解析出的数据净长度
 };

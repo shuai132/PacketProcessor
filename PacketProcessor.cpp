@@ -44,6 +44,7 @@ void PacketProcessor::setUseCrc(bool enable) {
 }
 
 void PacketProcessor::setMaxBufferSize(uint32_t size) {
+    assert(size > 0);
     maxBufferSize_ = size + ALL_HEADER_LEN;
     clearBuffer();
 }
@@ -52,11 +53,11 @@ void PacketProcessor::clearBuffer() {
     typeof(buffer_) tmp;
     tmp.swap(buffer_);
     findHeader_ = false;
-    dataLen_ = 0;
+    dataSize_ = 0;
 }
 
 std::vector<uint8_t> PacketProcessor::pack(const void* data, uint32_t size) {
-    uint32_t payloadSize = HEADER_LEN + LEN_BYTES + size + CHECK_LEN;
+    uint32_t payloadSize = size + ALL_HEADER_LEN;
     std::vector<uint8_t> payload;
     payload.reserve(payloadSize);
     packForeach(data, size, [&](uint8_t* data, size_t size) {
@@ -71,6 +72,11 @@ std::vector<uint8_t> PacketProcessor::pack(const std::string& data) {
     return pack(data.data(), data.length());
 }
 
+/**
+ * 约定形式: 包头2字节(0x5AA5)+数据净长度4字节(大端序)+长度校验2字节(长度CRC16)+数据+校验2字节(数据CRC16/长度CRC16的按位取反)
+ * @param data
+ * @param size
+ */
 void PacketProcessor::packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) {
     uint8_t tmp[4];
 
@@ -78,7 +84,7 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
     tmp[1] = H_2;
     handle(tmp, 2);
 
-    uint32_t dataSize = size + CHECK_LEN;
+    uint32_t dataSize = size;
     tmp[0] = (dataSize & 0xff000000) >> 8 * 3;
     tmp[1] = (dataSize & 0x00ff0000) >> 8 * 2;
     tmp[2] = (dataSize & 0x0000ff00) >> 8 * 1;
@@ -98,11 +104,6 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
     handle(tmp, 2);
 }
 
-/**
- * 约定形式: 包头2字节(0x5AA5)+长度4字节(大端序)+长度校验2字节(长度CRC16)+数据+校验2字节(数据CRC16)
- * @param data
- * @param size
- */
 void PacketProcessor::feed(const uint8_t* data, size_t size) {
     if (size == 0) return;
 //    LOGI("feed size: %u", size);
@@ -138,14 +139,13 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
         }
     } else {
         START_BUFFER:
-        if (buffer_.size() + size - startPos > maxBufferSize_) {
-            LOGE("buffer size overflow, now: %zu, max: %u", buffer_.size() + size, maxBufferSize_);
+        const auto needSize = buffer_.size() + size - startPos;
+        if (needSize > maxBufferSize_) {
+            LOGW("size too big, need: %zu, max: %u", needSize, maxBufferSize_);
             clearBuffer();
             return;
         }
-        FORS (i, startPos, size) {
-            buffer_.push_back(data[i]);
-        }
+        buffer_.insert(buffer_.cend(), data + startPos, data + size - startPos);
     }
 
     // 尝试解包
@@ -153,23 +153,21 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
 }
 
 size_t PacketProcessor::getDataPos() {
-    assert(!buffer_.empty());
-    assert(buffer_.size() >= dataLen_);
+    assert(buffer_.size() >= dataSize_ + ALL_HEADER_LEN);
     return HEADER_LEN + LEN_BYTES;
 }
 
 /**
  * @return 数据净长度 不包括头、长度、校验等
  */
-size_t PacketProcessor::getDataLength() {
-    assert(!buffer_.empty());
-    assert(buffer_.size() >= dataLen_);
-    return dataLen_ - CHECK_LEN;  // 减去校验
+size_t PacketProcessor::getDataSize() {
+    assert(buffer_.size() >= dataSize_ + ALL_HEADER_LEN);
+    return dataSize_;
 }
 
 uint8_t* PacketProcessor::getPayloadPtr() {
     assert(!buffer_.empty());
-    assert(buffer_.size() >= dataLen_);
+    assert(buffer_.size() >= dataSize_ + ALL_HEADER_LEN);
     return buffer_.data() + getDataPos();
 }
 
@@ -201,11 +199,17 @@ void PacketProcessor::tryUnpack() {
 
     // 等足够LEN_BYTES字节时开始计算长度
     if (buffer_.size() < HEADER_LEN + LEN_BYTES) return;
-    if (dataLen_ == 0) {
+    if (dataSize_ == 0) {
         uint32_t size = 0;
-        const int LEN_BYTES_WITHOUT_CRC = LEN_BYTES - LEN_CRC_B;
+        const unsigned int LEN_BYTES_WITHOUT_CRC = LEN_BYTES - LEN_CRC_B;
         FOR (i, LEN_BYTES_WITHOUT_CRC) {
             size += buffer_[HEADER_LEN + i] << (LEN_BYTES_WITHOUT_CRC - i - 1) * 8;
+        }
+
+        if (size == 0) {
+            LOGE("size can not be zero!");
+            restart(HEADER_LEN);
+            return;
         }
 
         if (size > maxBufferSize_) {
@@ -214,30 +218,29 @@ void PacketProcessor::tryUnpack() {
             return;
         }
 
-        uint16_t expectCrc = 0;
+        uint16_t expectSizeCrc = 0;
         FOR (i, LEN_CRC_B) {
-            expectCrc += buffer_[HEADER_LEN + LEN_BYTES_WITHOUT_CRC + i] << (LEN_CRC_B - i - 1) * 8;
+            expectSizeCrc += buffer_[HEADER_LEN + LEN_BYTES_WITHOUT_CRC + i] << (LEN_CRC_B - i - 1) * 8;
         }
         uint16_t sizeCrc = calCrc<uint32_t>(size);
-        LOGV("length crc: 0x%02X  0x%02X", sizeCrc, expectCrc);
+        LOGV("length crc: 0x%02X  0x%02X", sizeCrc, expectSizeCrc);
 
-        if (sizeCrc != expectCrc) {
-            LOGE("length crc error: 0x%02X != 0x%02X", sizeCrc, expectCrc);
-            restart(LEN_BYTES);
+        if (sizeCrc != expectSizeCrc) {
+            LOGE("size crc error: 0x%02X != 0x%02X", sizeCrc, expectSizeCrc);
+            restart(HEADER_LEN);
             return;
         }
-        dataLen_ = size;
-        LOGD("headerLen_=%zu", dataLen_);
+        dataSize_ = size;
+        LOGD("headerLen_=%zu", dataSize_);
     }
 
     // 判断长度是否足够
-    if (buffer_.size() >= HEADER_LEN + LEN_BYTES + dataLen_) {
+    if (buffer_.size() >= dataSize_ + ALL_HEADER_LEN) {
         LOGV("buffer_.size()=%zu", buffer_.size());
         if (checkCrc()) {
             if (onPacketHandle_) {
-                onPacketHandle_(getPayloadPtr(), getDataLength());
+                onPacketHandle_(getPayloadPtr(), getDataSize());
             }
-            LOGV("now buffer_.size()=%zu", buffer_.size());
             restart(getNextPacketPos());
         } else {
             // 重新从buffer找 防止遗漏
@@ -250,32 +253,33 @@ bool PacketProcessor::checkCrc() {
     uint8_t* buffer = buffer_.data();
 
     uint8_t* dataPos = buffer + getDataPos();
-    uint32_t dataSize = getDataLength();
+    uint32_t dataSize = getDataSize();
     uint8_t* crcPos = dataPos + dataSize;
 
-    uint16_t expectCrc = useCrc_ ? crc_16(dataPos, dataSize) : ~calCrc(dataSize);
+    uint16_t expectDataCrc = useCrc_ ? crc_16(dataPos, dataSize) : ~calCrc(dataSize);
     uint16_t dataCrc = 0;
     FOR (i, CHECK_LEN) {
-        dataCrc += crcPos[i] << 8u * (CHECK_LEN - 1 - i);
+        dataCrc += (typeof(dataCrc))(crcPos[i]) << 8u * (CHECK_LEN - 1 - i);
     }
-    bool ret = dataCrc == expectCrc;
+    bool ret = dataCrc == expectDataCrc;
     if (not ret) {
-        LOGE("data crc error: 0x%02X != 0x%02X", dataCrc, expectCrc);
+        LOGE("data crc error: 0x%02X != 0x%02X", dataCrc, expectDataCrc);
     }
-    return dataCrc == expectCrc;
+    return dataCrc == expectDataCrc;
 }
 
 size_t PacketProcessor::getNextPacketPos() {
-    return getDataPos() + dataLen_;
+    return getDataPos() + dataSize_ + CHECK_LEN;
 }
 
 void PacketProcessor::restart(uint32_t pos) {
+    LOGV("restart: pos=%u,  buffer_.size()=%zu", pos, buffer_.size());
     assert(buffer_.size() >= pos);
 
     buffer_.assign(buffer_.cbegin() + pos, buffer_.cend());
 
     findHeader_ = false;
-    dataLen_ = 0;
+    dataSize_ = 0;
 
     // 每次解包成功后 要继续尝试解包 因为缓冲可能包含多个包
     tryUnpack();
