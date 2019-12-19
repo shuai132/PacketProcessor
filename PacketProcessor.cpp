@@ -3,13 +3,9 @@
 
 #include "PacketProcessor.h"
 #include "crc/checksum.h"
-#include "log.h"
 
-#if 0
-#define LOGV            LOGI
-#else
-#define LOGV(fmt, ...)  ((void)0)
-#endif
+//#define LOG_SHOW_VERBOSE
+#include "log.h"
 
 #define FORS(i, s, n)   for(std::remove_reference<std::remove_const<typeof(n)>::type>::type i = s; i < n; i++)
 #define FOR(i, n)       FORS(i, 0, n)
