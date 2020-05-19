@@ -7,7 +7,7 @@
 //#define LOG_SHOW_VERBOSE
 #include "log.h"
 
-#define FORS(i, s, n)   for(std::remove_reference<std::remove_const<typeof(n)>::type>::type i = s; i < n; i++)
+#define FORS(i, s, n)   for(typename std::remove_reference<typename std::remove_const<decltype(n)>::type>::type i = s; i < n; i++)
 #define FOR(i, n)       FORS(i, 0, n)
 
 /**
@@ -46,7 +46,7 @@ void PacketProcessor::setMaxBufferSize(uint32_t size) {
 }
 
 void PacketProcessor::clearBuffer() {
-    typeof(buffer_) tmp;
+    decltype(buffer_) tmp;
     tmp.swap(buffer_);
     findHeader_ = false;
     dataSize_ = 0;
@@ -255,7 +255,7 @@ bool PacketProcessor::checkCrc() {
     uint16_t expectDataCrc = useCrc_ ? crc_16(dataPos, dataSize) : ~calCrc(dataSize);
     uint16_t dataCrc = 0;
     FOR (i, CHECK_LEN) {
-        dataCrc += (typeof(dataCrc))(crcPos[i]) << 8u * (CHECK_LEN - 1 - i);
+        dataCrc += (decltype(dataCrc))(crcPos[i]) << 8u * (CHECK_LEN - 1 - i);
     }
     bool ret = dataCrc == expectDataCrc;
     if (not ret) {
