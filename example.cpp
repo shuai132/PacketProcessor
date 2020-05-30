@@ -5,9 +5,6 @@
 #include "PacketProcessor.h"
 #include "log.h"
 
-using std::placeholders::_1;
-using std::placeholders::_2;
-
 #define CHECK(b)    if (!(b)) FATAL("test failed"); else LOG("###PASSED###")
 
 static void simpleUsage()  {

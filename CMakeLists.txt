@@ -18,7 +18,6 @@ include_directories(modules/log)
 
 # example
 if(packetprocessor_BUILD_EXAMPLE)
-    include_directories(.)
     link_libraries(${PROJECT_NAME})
-    add_executable(packetprocessor_exampple example/packet_example.cpp)
+    add_executable(${PROJECT_NAME}_exampple example.cpp)
 endif()

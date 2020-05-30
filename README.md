@@ -30,4 +30,4 @@ processor.feed(payload.data(), payload.size());
 ```
 
 * full test  
-[example/packet_example.cpp](example/packet_example.cpp)
+[example.cpp](example.cpp)

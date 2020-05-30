@@ -100,7 +100,8 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
     handle(tmp, 2);
 }
 
-void PacketProcessor::feed(const uint8_t* data, size_t size) {
+void PacketProcessor::feed(const void* d, size_t size) {
+    const uint8_t* data = (uint8_t*)d;
     if (size == 0) return;
 //    LOGI("feed size: %u", size);
 //    FOR(i, size) {
@@ -137,11 +138,11 @@ void PacketProcessor::feed(const uint8_t* data, size_t size) {
         START_BUFFER:
         const auto needSize = buffer_.size() + size - startPos;
         if (needSize > maxBufferSize_) {
-            LOGW("size too big, need: %zu, max: %u", needSize, maxBufferSize_);
+            LOGW("size too big, need: %zu, max: %zu", needSize, (size_t)maxBufferSize_);
             clearBuffer();
             return;
         }
-        buffer_.insert(buffer_.cend(), data + startPos, data + size - startPos);
+        buffer_.insert(buffer_.end(), data + startPos, data + size - startPos);
     }
 
     // 尝试解包

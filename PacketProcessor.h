@@ -49,7 +49,7 @@ public:
      * @param data
      * @param size
      */
-    void feed(const uint8_t* data, size_t size);
+    void feed(const void* data, size_t size);
 
 private:
     size_t getDataPos();
