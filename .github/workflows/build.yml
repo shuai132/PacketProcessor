@@ -1,10 +1,16 @@
 name: build
 
-on: [push]
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
 
 jobs:
   Linux:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
         with:
@@ -17,4 +23,4 @@ jobs:
         run: mkdir build && cd build && cmake .. && make
 
       - name: run
-        run: cd build && ./packetprocessor_exampple
+        run: cd build && ./PacketProcessor_test

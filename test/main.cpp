@@ -1,46 +1,44 @@
 #include <random>
-#include <cassert>
 #include <ctime>
-
 #include "PacketProcessor.h"
+#include "assert_def.h"
 #include "log.h"
 
-#define CHECK(b)    if (!(b)) FATAL("test failed"); else LOG("###PASSED###")
-
 static void simpleUsage()  {
-    LOG("Sample Usage:");
+    PacketProcessor_LOG("Sample Usage:");
     PacketProcessor processor([&](uint8_t* data, size_t size) {
-        LOG("Got packet: %zu, %s", size, std::string((char*)data, size).c_str());
+        printf("Got packet: %zu, %s\n", size, std::string((char*)data, size).c_str());
     });
     auto payload = processor.pack("hello world");
     processor.feed(payload.data(), payload.size());
 }
 
 static void testCommon() {
-    LOG("generate big data...");
+    PacketProcessor_LOG("generate big data...");
     bool pass = false;
     std::string TEST_PAYLOAD;
     for (int i = 0; i < 1000; i++) {
         TEST_PAYLOAD += "helloworld";   // 10bytes
     }
-    LOG("data generated, size:%zu", TEST_PAYLOAD.size());
+    PacketProcessor_LOG("data generated, size:%zu", TEST_PAYLOAD.size());
 
     PacketProcessor processor([&](uint8_t* data, size_t size) {
-        LOG("get payload size:%zu", size);
+        PacketProcessor_LOG("get payload size:%zu", size);
         if (std::string((char*)data, size) == TEST_PAYLOAD) {
             pass = true;
         }
     });
 
-    LOG("packing...");
+    PacketProcessor_LOG("packing...");
     auto payload = processor.pack(TEST_PAYLOAD);
     const uint32_t payloadSize = payload.size();
-    LOG("payloadSize:%u", payloadSize);
+    PacketProcessor_LOG("payloadSize:%u", payloadSize);
 
-    LOG("******test normal******");
+    PacketProcessor_LOG("******test normal******");
     processor.feed(payload.data(), payloadSize);
+    ASSERT(pass);
 
-    LOG("******test random******");
+    PacketProcessor_LOG("******test random******");
     uint32_t sendSize = 0;
     std::default_random_engine generator(time(nullptr));
     std::uniform_int_distribution<int> dis(1, 10);
@@ -53,15 +51,15 @@ static void testCommon() {
         processor.feed(payload.data() + sendSize, randomSize);
         sendSize += randomSize;
     }
-    CHECK(pass);
+    ASSERT(pass);
 }
 
 static void testSerious() {
-    LOG("******test overflow******");
+    PacketProcessor_LOG("******test overflow******");
     bool pass = false;
     uint8_t testData = 0xAA;
     PacketProcessor processor([&](const uint8_t* data, size_t size) {
-        LOG("get payload size:%zu", size);
+        PacketProcessor_LOG("get payload size:%zu", size);
         if (data[0] == testData) {
             pass = true;
         }
@@ -69,7 +67,7 @@ static void testSerious() {
     processor.setMaxBufferSize(1);
     const size_t fakeDataLen = 8;
     std::vector<uint8_t> payload = {
-            // 错误数据(只有前部分)
+            /// 在数据前面故意放置错误数据
             0x5A,
             0xA5,
 
@@ -81,7 +79,7 @@ static void testSerious() {
             0xC0,
             0xC1,
 
-            // 正式数据
+            /// 正确的数据包
             0x5A,
             0xA5,
 
@@ -101,13 +99,14 @@ static void testSerious() {
     for (size_t i = 0; i < payload.size(); i++) {
         processor.feed(payload.data() + i, 1);
     }
-    CHECK(pass);
+    ASSERT(pass);
 
-    LOG("retest...");
+    PacketProcessor_LOG("retest...");
     pass = false;
     processor.feed(payload.data(), payload.size());
+    ASSERT(!pass);
     processor.feed(payload.data() + fakeDataLen, payload.size() - fakeDataLen);
-    CHECK(pass);
+    ASSERT(pass);
 }
 
 int main() {

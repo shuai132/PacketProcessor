@@ -23,11 +23,11 @@
 * simplest
 ```cpp
 PacketProcessor processor([&](uint8_t* data, size_t size) {
-    LOG("Got packet: %zu, %s", size, std::string((char*)data, size).c_str());
+    printf("Got packet: %zu, %s\n", size, std::string((char*)data, size).c_str());
 });
 auto payload = processor.pack("hello world");
 processor.feed(payload.data(), payload.size());
 ```
 
 * full test  
-[example.cpp](example.cpp)
+[test/main.cpp](test/main.cpp)

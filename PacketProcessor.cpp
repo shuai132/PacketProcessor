@@ -4,7 +4,7 @@
 #include "PacketProcessor.h"
 #include "crc/checksum.h"
 
-//#define LOG_SHOW_VERBOSE
+//#define PacketProcessor_LOG_SHOW_VERBOSE
 #include "log.h"
 
 #define FORS(i, s, n)   for(typename std::remove_reference<typename std::remove_const<decltype(n)>::type>::type i = s; i < n; i++)
@@ -25,10 +25,6 @@ static uint16_t calCrc(T param) {
 
 PacketProcessor::PacketProcessor(OnPacketHandle handle, bool useCrc)
         : onPacketHandle_(std::move(handle)), useCrc_(useCrc) {
-}
-
-PacketProcessor::PacketProcessor(bool useCrc)
-        : onPacketHandle_(nullptr), useCrc_(useCrc) {
 }
 
 void PacketProcessor::setOnPacketHandle(const OnPacketHandle& handle) {
@@ -52,19 +48,19 @@ void PacketProcessor::clearBuffer() {
     dataSize_ = 0;
 }
 
-std::vector<uint8_t> PacketProcessor::pack(const void* data, uint32_t size) {
+std::string PacketProcessor::pack(const void* data, uint32_t size) const {
     uint32_t payloadSize = size + ALL_HEADER_LEN;
-    std::vector<uint8_t> payload;
+    std::string payload;
     payload.reserve(payloadSize);
     packForeach(data, size, [&](uint8_t* data, size_t size) {
         while (size--) {
-            payload.push_back(*data++);
+            payload.push_back((char)*data++);
         }
     });
     return payload;
 }
 
-std::vector<uint8_t> PacketProcessor::pack(const std::string& data) {
+std::string PacketProcessor::pack(const std::string& data) const {
     return pack(data.data(), data.length());
 }
 
@@ -73,7 +69,7 @@ std::vector<uint8_t> PacketProcessor::pack(const std::string& data) {
  * @param data
  * @param size
  */
-void PacketProcessor::packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) {
+void PacketProcessor::packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) const {
     uint8_t tmp[4];
 
     tmp[0] = H_1;
@@ -103,10 +99,7 @@ void PacketProcessor::packForeach(const void* data, uint32_t size, const std::fu
 void PacketProcessor::feed(const void* d, size_t size) {
     const uint8_t* data = (uint8_t*)d;
     if (size == 0) return;
-//    LOGI("feed size: %u", size);
-//    FOR(i, size) {
-//        LOGI("feed: %02X", data[i]);
-//    }
+    PacketProcessor_LOGV("feed: %u", size);
 
     // 缓存数据(当遇到包头后才开始缓存)
     size_t startPos = 0;
@@ -138,7 +131,7 @@ void PacketProcessor::feed(const void* d, size_t size) {
         START_BUFFER:
         const auto needSize = buffer_.size() + size - startPos;
         if (needSize > maxBufferSize_) {
-            LOGW("size too big, need: %zu, max: %zu", needSize, (size_t)maxBufferSize_);
+            PacketProcessor_LOGW("size too big, need: %zu, max: %zu", needSize, (size_t)maxBufferSize_);
             clearBuffer();
             return;
         }
@@ -204,13 +197,13 @@ void PacketProcessor::tryUnpack() {
         }
 
         if (size == 0) {
-            LOGE("size can not be zero!");
+            PacketProcessor_LOGE("size can not be zero!");
             restart(HEADER_LEN);
             return;
         }
 
         if (size > maxBufferSize_) {
-            LOGW("size too big, or data error, restart!");
+            PacketProcessor_LOGW("size too big, or data error, restart!");
             restart(HEADER_LEN);
             return;
         }
@@ -220,20 +213,20 @@ void PacketProcessor::tryUnpack() {
             expectSizeCrc += buffer_[HEADER_LEN + LEN_BYTES_WITHOUT_CRC + i] << (LEN_CRC_B - i - 1) * 8;
         }
         uint16_t sizeCrc = calCrc<uint32_t>(size);
-        LOGV("length crc: 0x%02X  0x%02X", sizeCrc, expectSizeCrc);
+        PacketProcessor_LOGV("length crc: 0x%02X  0x%02X", sizeCrc, expectSizeCrc);
 
         if (sizeCrc != expectSizeCrc) {
-            LOGE("size crc error: 0x%02X != 0x%02X", sizeCrc, expectSizeCrc);
+            PacketProcessor_LOGE("size crc error: 0x%02X != 0x%02X", sizeCrc, expectSizeCrc);
             restart(HEADER_LEN);
             return;
         }
         dataSize_ = size;
-        LOGD("headerLen_=%zu", dataSize_);
+        PacketProcessor_LOGD("headerLen_=%zu", dataSize_);
     }
 
     // 判断长度是否足够
     if (buffer_.size() >= dataSize_ + ALL_HEADER_LEN) {
-        LOGV("buffer_.size()=%zu", buffer_.size());
+        PacketProcessor_LOGV("buffer_.size()=%zu", buffer_.size());
         if (checkCrc()) {
             if (onPacketHandle_) {
                 onPacketHandle_(getPayloadPtr(), getDataSize());
@@ -260,7 +253,7 @@ bool PacketProcessor::checkCrc() {
     }
     bool ret = dataCrc == expectDataCrc;
     if (not ret) {
-        LOGE("data crc error: 0x%02X != 0x%02X", dataCrc, expectDataCrc);
+        PacketProcessor_LOGE("data crc error: 0x%02X != 0x%02X", dataCrc, expectDataCrc);
     }
     return dataCrc == expectDataCrc;
 }
@@ -270,7 +263,7 @@ size_t PacketProcessor::getNextPacketPos() {
 }
 
 void PacketProcessor::restart(uint32_t pos) {
-    LOGV("restart: pos=%u,  buffer_.size()=%zu", pos, buffer_.size());
+    PacketProcessor_LOGV("restart: pos=%u,  buffer_.size()=%zu", pos, buffer_.size());
     assert(buffer_.size() >= pos);
 
     buffer_.assign(buffer_.cbegin() + pos, buffer_.cend());

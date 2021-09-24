@@ -11,8 +11,6 @@ class PacketProcessor {
 public:
     explicit PacketProcessor(OnPacketHandle handle = nullptr, bool useCrc = false);
 
-    explicit PacketProcessor(bool useCrc = false);
-
 public:
     void setOnPacketHandle(const OnPacketHandle& handle);
 
@@ -32,9 +30,9 @@ public:
      * @param size
      * @return
      */
-    std::vector<uint8_t> pack(const void* data, uint32_t size);
+    std::string pack(const void* data, uint32_t size) const;
 
-    std::vector<uint8_t> pack(const std::string& data);
+    std::string pack(const std::string& data) const;
 
     /**
      * 遍历打包数据
@@ -42,7 +40,7 @@ public:
      * @param size
      * @param handle
      */
-    void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle);
+    void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) const;
 
     /**
      * 送数据 自动解析出数据包时回调onPacketHandle_
