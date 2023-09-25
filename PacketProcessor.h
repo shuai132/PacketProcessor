@@ -1,85 +1,85 @@
 #pragma once
 
-#include <vector>
 #include <cstdint>
-#include <string>
 #include <functional>
+#include <string>
+#include <vector>
 
 class PacketProcessor {
-    using OnPacketHandle = std::function<void(uint8_t* data, size_t size)>;
+  using OnPacketHandle = std::function<void(uint8_t* data, size_t size)>;
 
-public:
-    explicit PacketProcessor(OnPacketHandle handle = nullptr, bool useCrc = false);
+ public:
+  explicit PacketProcessor(OnPacketHandle handle = nullptr, bool useCrc = false);
 
-public:
-    void setOnPacketHandle(const OnPacketHandle& handle);
+ public:
+  void setOnPacketHandle(const OnPacketHandle& handle);
 
-    /**
-     * 设置对数据是否启用CRC 否则对数据长度CRC
-     * @param useCrc
-     */
-    void setUseCrc(bool useCrc);
+  /**
+   * 设置对数据是否启用CRC 否则对数据长度CRC
+   * @param useCrc
+   */
+  void setUseCrc(bool useCrc);
 
-    void setMaxBufferSize(uint32_t size);
+  void setMaxBufferSize(uint32_t size);
 
-    void clearBuffer();
+  void clearBuffer();
 
-    /**
-     * 打包数据
-     * @param data 视为uint8_t*
-     * @param size
-     * @return
-     */
-    std::string pack(const void* data, uint32_t size) const;
+  /**
+   * 打包数据
+   * @param data 视为uint8_t*
+   * @param size
+   * @return
+   */
+  std::string pack(const void* data, uint32_t size) const;
 
-    std::string pack(const std::string& data) const;
+  std::string pack(const std::string& data) const;
 
-    /**
-     * 遍历打包数据
-     * @param data 视为uint8_t*
-     * @param size
-     * @param handle
-     */
-    void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) const;
+  /**
+   * 遍历打包数据
+   * @param data 视为uint8_t*
+   * @param size
+   * @param handle
+   */
+  void packForeach(const void* data, uint32_t size, const std::function<void(uint8_t* data, size_t size)>& handle) const;
 
-    /**
-     * 送数据 自动解析出数据包时回调onPacketHandle_
-     * @param data
-     * @param size
-     */
-    void feed(const void* data, size_t size);
+  /**
+   * 送数据 自动解析出数据包时回调onPacketHandle_
+   * @param data
+   * @param size
+   */
+  void feed(const void* data, size_t size);
 
-private:
-    size_t getDataPos();
+ private:
+  size_t getDataPos();
 
-    size_t getDataSize();
+  size_t getDataSize();
 
-    uint8_t* getPayloadPtr();
+  uint8_t* getPayloadPtr();
 
-    bool findHeader();
+  bool findHeader();
 
-    void tryUnpack();
+  void tryUnpack();
 
-    bool checkCrc();
+  bool checkCrc();
 
-    size_t getNextPacketPos();
+  size_t getNextPacketPos();
 
-    void restart(uint32_t pos);
+  void restart(uint32_t pos);
 
-private:
-    OnPacketHandle onPacketHandle_;
-    bool useCrc_;
+ private:
+  OnPacketHandle onPacketHandle_;
+  bool useCrc_;
 
-    static const uint8_t H_1 = 0x5A;
-    static const uint8_t H_2 = 0xA5;
-    static const unsigned int HEADER_LEN = 2;
-    static const unsigned int LEN_CRC_B = 2;
-    static const unsigned int LEN_BYTES = 4 + LEN_CRC_B;
-    static const unsigned int CHECK_LEN = 2;
-    static const unsigned int ALL_HEADER_LEN = HEADER_LEN + LEN_BYTES + CHECK_LEN;
+  static const uint8_t H_1 = 0x5A;
+  static const uint8_t H_2 = 0xA5;
+  static const unsigned int HEADER_LEN = 2;
+  static const unsigned int LEN_CRC_B = 2;
+  static const unsigned int LEN_BYTES = 4 + LEN_CRC_B;
+  static const unsigned int CHECK_LEN = 2;
+  static const unsigned int ALL_HEADER_LEN = HEADER_LEN + LEN_BYTES + CHECK_LEN;
 
-    std::vector<uint8_t> buffer_;   // 数据缓存
-    uint32_t maxBufferSize_ = 1024 * 1024 * 1;  // 最大缓存字节数 默认1MBytes
-    bool findHeader_ = false;       // 找到包头
-    size_t dataSize_ = 0;           // 解析出的数据净长度
+  std::vector<uint8_t> buffer_;               // 数据缓存
+  uint32_t maxBufferSize_ = 1024 * 1024 * 1;  // 最大缓存字节数 默认1MBytes
+  bool findHeader_ = false;                   // 找到包头
+  size_t dataSize_ = 0;                       // 解析出的数据净长度
 };
