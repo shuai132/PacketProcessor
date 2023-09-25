@@ -12,12 +12,9 @@ jobs:
   Linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: 1
-
-      - name: submodule
-        run: git submodule update --init --recursive
+          submodules: true
 
       - name: cmake build
         run: mkdir build && cd build && cmake .. && make
