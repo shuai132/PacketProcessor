@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 
 option(PacketProcessor_BUILD_TEST "" OFF)
 
@@ -17,8 +17,7 @@ add_library(${PROJECT_NAME} STATIC
 
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
-if(PacketProcessor_BUILD_TEST)
+if (PacketProcessor_BUILD_TEST)
     link_libraries(${PROJECT_NAME})
     add_executable(${PROJECT_NAME}_test test/main.cpp)
-    target_compile_definitions(${PROJECT_NAME}_test PRIVATE PacketProcessor_LOG_WITH_COLOR)
-endif()
+endif ()
